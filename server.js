@@ -2,6 +2,7 @@
 import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
+import Razorpay from 'razorpay';
 
 import adminRoutes from './routes/adminRoutes.js';
 import studentRoutes from './routes/studentRoutes.js'; // 👈 Added
@@ -30,7 +31,48 @@ app.use(cors({
   credentials: true
 }));
 
+// ==================
+// Razorpay Setup
+// ==================
+const razorpay = new Razorpay({
+  key_id: process.env.RAZORPAY_KEY_ID,
+  key_secret: process.env.RAZORPAY_KEY_SECRET
+});
+
+// Create Razorpay Order (for frontend)
+app.post('/api/payment/create-order', async (req, res) => {
+  try {
+    const { amount, currency = 'INR', receipt } = req.body;
+
+    if (!amount) {
+      return res.status(400).json({ error: 'Amount is required' });
+    }
+
+    const options = {
+      amount: amount * 100, // convert to paise
+      currency,
+      receipt: receipt || `receipt_${Date.now()}`,
+    };
+
+    const order = await razorpay.orders.create(options);
+
+    res.json({
+      success: true,
+      order
+    });
+  } catch (err) {
+    console.error('❌ Error creating Razorpay order:', err);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to create Razorpay order',
+      details: err.message
+    });
+  }
+});
+
+// ==================
 // Routes with /api prefix
+// ==================
 app.use('/api/admin', adminRoutes);
 app.use('/api/student', studentRoutes); // 👈 Added Student API
 
@@ -45,7 +87,8 @@ app.get('/', (req, res) => {
     endpoints: {
       health: '/health',
       admin: '/api/admin',
-      student: '/api/student'
+      student: '/api/student',
+      payment: '/api/payment/create-order'
     },
     timestamp: new Date().toISOString()
   });
@@ -61,7 +104,8 @@ app.get('/health', (req, res) => {
     uptime: process.uptime(),
     routes: {
       admin: '/api/admin',
-      student: '/api/student'
+      student: '/api/student',
+      payment: '/api/payment/create-order'
     }
   });
 });
@@ -79,6 +123,9 @@ app.get('/api', (req, res) => {
       student: {
         sendOtp: 'POST /api/student/send-otp',
         verifyOtp: 'POST /api/student/verify-otp'
+      },
+      payment: {
+        createOrder: 'POST /api/payment/create-order'
       }
     }
   });
@@ -94,7 +141,8 @@ app.use('/api/*', (req, res) => {
       'POST /api/admin/login',
       'GET /api/admin/dashboard',
       'POST /api/student/send-otp',
-      'POST /api/student/verify-otp'
+      'POST /api/student/verify-otp',
+      'POST /api/payment/create-order'
     ]
   });
 });
@@ -113,7 +161,6 @@ app.use((req, res) => {
 app.use((error, req, res, next) => {
   console.error('❌ Global error:', error);
 
-  // Handle CORS errors specifically
   if (error.message.includes('CORS not allowed')) {
     return res.status(403).json({
       success: false,
@@ -135,6 +182,7 @@ app.listen(PORT, () => {
   console.log(`🚀 VN Music Academy API running on port ${PORT}`);
   console.log(`👨‍💼 Admin API: http://localhost:${PORT}/api/admin`);
   console.log(`🎓 Student API: http://localhost:${PORT}/api/student`);
+  console.log(`💳 Payment API: http://localhost:${PORT}/api/payment/create-order`);
   console.log(`❤️  Health Check: http://localhost:${PORT}/health`);
   console.log(`📋 API Info: http://localhost:${PORT}/api`);
 });
