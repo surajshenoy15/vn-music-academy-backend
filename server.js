@@ -5,7 +5,8 @@ import dotenv from "dotenv";
 
 import adminRoutes from "./routes/adminRoutes.js";
 import studentRoutes from "./routes/studentRoutes.js";
-import paymentRoutes from "./routes/paymentRoutes.js"; // 👈 Added
+import paymentRoutes from "./routes/paymentRoutes.js";
+import contactRoutes from "./routes/contactRoutes.js"; // 👈 Added
 
 dotenv.config();
 
@@ -14,11 +15,13 @@ const app = express();
 // Middleware
 app.use(express.json());
 
+// ==================
 // CORS setup
+// ==================
 const allowedOrigins = [
-  "http://localhost:5173",
-  "http://localhost:3001",
-  process.env.FRONTEND_URL,
+  "http://localhost:5173",   // Vite dev
+  "http://localhost:3001",   // React dev
+  process.env.FRONTEND_URL,  // Production frontend (set in .env)
 ];
 
 app.use(
@@ -27,6 +30,7 @@ app.use(
       if (!origin || allowedOrigins.includes(origin)) {
         return callback(null, true);
       }
+      console.warn(`🚫 CORS blocked request from origin: ${origin}`);
       return callback(new Error("CORS not allowed from this origin"));
     },
     credentials: true,
@@ -38,7 +42,8 @@ app.use(
 // ==================
 app.use("/api/admin", adminRoutes);
 app.use("/api/student", studentRoutes);
-app.use("/api/payment", paymentRoutes); // 👈 Payment routes
+app.use("/api/payment", paymentRoutes);
+app.use("/api/contact", contactRoutes); // 👈 Contact routes
 
 // Legacy routes (for backward compatibility)
 app.use("/admin", adminRoutes);
@@ -53,6 +58,7 @@ app.get("/", (req, res) => {
       admin: "/api/admin",
       student: "/api/student",
       payment: "/api/payment/create-order",
+      contact: "/api/contact",
     },
     timestamp: new Date().toISOString(),
   });
@@ -70,6 +76,7 @@ app.get("/health", (req, res) => {
       admin: "/api/admin",
       student: "/api/student",
       payment: "/api/payment/create-order",
+      contact: "/api/contact",
     },
   });
 });
@@ -92,6 +99,9 @@ app.get("/api", (req, res) => {
         createOrder: "POST /api/payment/create-order",
         verifyPayment: "POST /api/payment/verify-payment",
       },
+      contact: {
+        submitForm: "POST /api/contact/submit", // example route
+      },
     },
   });
 });
@@ -109,6 +119,7 @@ app.use("/api/*", (req, res) => {
       "POST /api/student/verify-otp",
       "POST /api/payment/create-order",
       "POST /api/payment/verify-payment",
+      "POST /api/contact/submit",
     ],
   });
 });
@@ -142,15 +153,18 @@ app.use((error, req, res, next) => {
   });
 });
 
+// ==================
 // Start server
+// ==================
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {
   console.log(`🚀 VN Music Academy API running on port ${PORT}`);
-  console.log(`👨‍💼 Admin API: http://localhost:${PORT}/api/admin`);
-  console.log(`🎓 Student API: http://localhost:${PORT}/api/student`);
-  console.log(`💳 Payment API: http://localhost:${PORT}/api/payment/create-order`);
-  console.log(`❤️  Health Check: http://localhost:${PORT}/health`);
-  console.log(`📋 API Info: http://localhost:${PORT}/api`);
+  console.log(`👨‍💼 Admin API: https://vn-music-academy.onrender.com/api/admin`);
+  console.log(`🎓 Student API: https://vn-music-academy.onrender.com/api/student`);
+  console.log(`💳 Payment API: https://vn-music-academy.onrender.com/api/payment/create-order`);
+  console.log(`📩 Contact API: https://vn-music-academy.onrender.com/api/contact`);
+  console.log(`❤️  Health Check: https://vn-music-academy.onrender.com/health`);
+  console.log(`📋 API Info: https://vn-music-academy.onrender.com/api`);
 });
 
 export default app;
