@@ -51,28 +51,38 @@ export const handleContactForm = async (req, res) => {
     }
 
     // ✅ Send Email Notification
-    if (!process.env.EMAIL_USER || !process.env.EMAIL_PASS || !process.env.RECEIVER_EMAIL) {
+    if (
+      !process.env.EMAIL_USER ||
+      !process.env.EMAIL_PASS ||
+      !process.env.RECEIVER_EMAIL
+    ) {
       console.warn("⚠️ Email env variables not set. Skipping email send.");
     } else {
-      // ✅ Use Gmail service (App Password required)
+      // ✅ Nodemailer Transporter
       const transporter = nodemailer.createTransport({
-        service: "gmail",
+        host: process.env.SMTP_HOST || "smtp.gmail.com",
+        port: process.env.SMTP_PORT || 587,
+        secure: false,
         auth: {
           user: process.env.EMAIL_USER,
-          pass: process.env.EMAIL_PASS, // must be App Password
+          pass: process.env.EMAIL_PASS, // Must be Gmail App Password
         },
       });
 
-      // Verify connection (logs if Gmail rejects credentials)
-      transporter.verify((err, success) => {
-        if (err) {
-          console.error("❌ SMTP verification failed:", err);
-        } else {
-          console.log("✅ SMTP server is ready to send emails");
-        }
-      });
+      // ✅ Verify SMTP connection
+      try {
+        await transporter.verify();
+        console.log("✅ SMTP connection successful!");
+      } catch (verifyErr) {
+        console.error("❌ SMTP verification failed:", verifyErr);
+        return res.status(500).json({
+          success: false,
+          error: "SMTP verification failed",
+          details: verifyErr.message,
+        });
+      }
 
-      // 🎵 Music Academy Email Design
+      // 🎵 Music Academy HTML Email Template
       const htmlTemplate = `
       <div style="font-family: Arial, sans-serif; background-color: #f9fafb; padding: 20px;">
         <div style="max-width: 600px; margin: auto; background: white; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); overflow: hidden;">
@@ -99,38 +109,29 @@ export const handleContactForm = async (req, res) => {
       </div>
       `;
 
+      // ✅ Send Email
       try {
-        await transporter.sendMail({
+        const info = await transporter.sendMail({
           from: `"🎵 VN Music Academy" <${process.env.EMAIL_USER}>`,
           to: process.env.RECEIVER_EMAIL,
           subject: `🎵 New Contact Form: ${subject} - From ${name}`,
           html: htmlTemplate,
-          text: `
-🎵 VN MUSIC ACADEMY - New Contact Form Submission
-
-Name: ${name}
-Email: ${email}
-Phone: ${phone || "Not provided"}
-Subject: ${subject}
-Preferred Contact: ${preferred_contact || "Not specified"}
-
-Message:
-${message}
-
----
-Received on ${new Date().toLocaleString()}
-          `,
         });
 
-        console.log(`📧 Email sent successfully to: ${process.env.RECEIVER_EMAIL}`);
-      } catch (mailErr) {
-        console.error("❌ Email send error:", mailErr);
+        console.log("📧 Email sent successfully:", info.response);
+      } catch (sendErr) {
+        console.error("❌ Error while sending email:", sendErr);
+        return res.status(500).json({
+          success: false,
+          error: "Email sending failed",
+          details: sendErr.message,
+        });
       }
     }
 
     return res.status(201).json({
       success: true,
-      message: "Contact message submitted successfully (check logs for email status)",
+      message: "Contact message submitted successfully and email sent",
       data,
     });
   } catch (err) {
@@ -138,6 +139,7 @@ Received on ${new Date().toLocaleString()}
     res.status(500).json({
       success: false,
       error: "Internal server error",
+      details: err.message,
     });
   }
 };
