@@ -50,22 +50,29 @@ export const handleContactForm = async (req, res) => {
       });
     }
 
-    // ✅ Send Email Notification with Music Theme Design
+    // ✅ Send Email Notification
     if (!process.env.EMAIL_USER || !process.env.EMAIL_PASS || !process.env.RECEIVER_EMAIL) {
       console.warn("⚠️ Email env variables not set. Skipping email send.");
     } else {
-      // ✅ Fixed: use createTransport
+      // ✅ Use Gmail service (App Password required)
       const transporter = nodemailer.createTransport({
-        host: process.env.SMTP_HOST || "smtp.gmail.com",
-        port: process.env.SMTP_PORT || 587,
-        secure: false,
+        service: "gmail",
         auth: {
           user: process.env.EMAIL_USER,
-          pass: process.env.EMAIL_PASS, // use Gmail App Password if using Gmail
+          pass: process.env.EMAIL_PASS, // must be App Password
         },
       });
 
-      // 🎵 Full Music Academy HTML Email Template (unchanged styling)
+      // Verify connection (logs if Gmail rejects credentials)
+      transporter.verify((err, success) => {
+        if (err) {
+          console.error("❌ SMTP verification failed:", err);
+        } else {
+          console.log("✅ SMTP server is ready to send emails");
+        }
+      });
+
+      // 🎵 Music Academy Email Design
       const htmlTemplate = `
       <div style="font-family: Arial, sans-serif; background-color: #f9fafb; padding: 20px;">
         <div style="max-width: 600px; margin: auto; background: white; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); overflow: hidden;">
@@ -92,13 +99,13 @@ export const handleContactForm = async (req, res) => {
       </div>
       `;
 
-      // ✅ Send email
-      await transporter.sendMail({
-        from: `"🎵 VN Music Academy" <${process.env.EMAIL_USER}>`,
-        to: process.env.RECEIVER_EMAIL,
-        subject: `🎵 New Contact Form: ${subject} - From ${name}`,
-        html: htmlTemplate,
-        text: `
+      try {
+        await transporter.sendMail({
+          from: `"🎵 VN Music Academy" <${process.env.EMAIL_USER}>`,
+          to: process.env.RECEIVER_EMAIL,
+          subject: `🎵 New Contact Form: ${subject} - From ${name}`,
+          html: htmlTemplate,
+          text: `
 🎵 VN MUSIC ACADEMY - New Contact Form Submission
 
 Name: ${name}
@@ -112,15 +119,18 @@ ${message}
 
 ---
 Received on ${new Date().toLocaleString()}
-        `,
-      });
+          `,
+        });
 
-      console.log(`📧 Email sent successfully to: ${process.env.RECEIVER_EMAIL}`);
+        console.log(`📧 Email sent successfully to: ${process.env.RECEIVER_EMAIL}`);
+      } catch (mailErr) {
+        console.error("❌ Email send error:", mailErr);
+      }
     }
 
     return res.status(201).json({
       success: true,
-      message: "Contact message submitted successfully and email sent",
+      message: "Contact message submitted successfully (check logs for email status)",
       data,
     });
   } catch (err) {
