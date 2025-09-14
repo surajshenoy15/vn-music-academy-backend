@@ -1,5 +1,5 @@
 // controllers/contactController.js
-import { supabase } from "../supabaseClient.js";
+import supabase from "../config/supabase.js";
 
 export const handleContactForm = async (req, res) => {
   try {
