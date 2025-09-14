@@ -61,11 +61,11 @@ export const handleContactForm = async (req, res) => {
         secure: false,
         auth: {
           user: process.env.EMAIL_USER,
-          pass: process.env.EMAIL_PASS,
+          pass: process.env.EMAIL_PASS, // use Gmail App Password if using Gmail
         },
       });
 
-      // 🎵 Full Music Academy HTML Email Template
+      // 🎵 Full Music Academy HTML Email Template (unchanged styling)
       const htmlTemplate = `
       <div style="font-family: Arial, sans-serif; background-color: #f9fafb; padding: 20px;">
         <div style="max-width: 600px; margin: auto; background: white; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); overflow: hidden;">
