@@ -1,3 +1,4 @@
+// backend/routes/contact.js
 import express from "express";
 import supabase from "../config/supabase.js";
 
@@ -5,27 +6,27 @@ const router = express.Router();
 
 router.post("/submit", async (req, res) => {
   try {
-    const { name, email, phone, subject, preferred_contact, message } = req.body;
+    console.log("Request body:", req.body);
 
-    // Basic validation
+    const { name, email, phone, subject, message, preferred_contact } = req.body;
+
     if (!name || !email || !message) {
-      return res.status(400).json({ error: "Name, email, and message are required" });
+      return res.status(400).json({ error: "Name, email, and message are required." });
     }
 
-    // Insert into Supabase
-    const { data, error } = await supabase
-      .from("contacts")
-      .insert([{ name, email, phone, subject, preferred_contact, message }]);
+    const { data, error } = await supabase.from("contacts").insert([
+      { name, email, phone, subject, message, preferred_contact }
+    ]);
 
     if (error) {
       console.error("Supabase insert error:", error);
-      return res.status(500).json({ error: "Failed to save contact submission" });
+      return res.status(500).json({ error: error.message });
     }
 
-    res.status(200).json({ message: "Contact saved successfully", data });
+    return res.status(200).json({ message: "Contact submission saved successfully!" });
   } catch (err) {
-    console.error("Server error:", err);
-    res.status(500).json({ error: "Server error" });
+    console.error("Unexpected backend error:", err);
+    return res.status(500).json({ error: "Failed to save contact submission" });
   }
 });
 
