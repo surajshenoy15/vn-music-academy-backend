@@ -1,5 +1,6 @@
 // controllers/contactController.js
 import supabase from "../config/supabase.js";
+import nodemailer from "nodemailer";
 
 export const handleContactForm = async (req, res) => {
   try {
@@ -49,9 +50,41 @@ export const handleContactForm = async (req, res) => {
       });
     }
 
+    // ✅ Send Email Notification
+    if (!process.env.EMAIL_USER || !process.env.EMAIL_PASS || !process.env.RECEIVER_EMAIL) {
+      console.warn("⚠️ Email env variables not set. Skipping email send.");
+    } else {
+      const transporter = nodemailer.createTransport({
+        service: "gmail",
+        auth: {
+          user: process.env.EMAIL_USER,       // sender email (Gmail)
+          pass: process.env.EMAIL_PASS,    // app password
+        },
+      });
+
+      await transporter.sendMail({
+        from: `"VN Music Academy" <${process.env.EMAIL_USER}>`,
+        to: process.env.RECEIVER_EMAIL,        // admin/receiver email
+        subject: `New Contact Form: ${subject}`,
+        text: `
+New contact form submission:
+
+Name: ${name}
+Email: ${email}
+Phone: ${phone || "Not provided"}
+Preferred Contact: ${preferred_contact || "Not specified"}
+
+Message:
+${message}
+        `,
+      });
+
+      console.log(`📧 Contact form email sent to: ${process.env.RECEIVER_EMAIL}`);
+    }
+
     return res.status(201).json({
       success: true,
-      message: "Contact message submitted successfully",
+      message: "Contact message submitted successfully and email sent",
       data,
     });
   } catch (err) {
