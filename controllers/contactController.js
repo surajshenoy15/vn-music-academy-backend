@@ -1,132 +1,79 @@
 // controllers/contactController.js
-import dotenv from "dotenv";
-import nodemailer from "nodemailer";
 import supabase from "../config/supabase.js";
+import nodemailer from "nodemailer";
 
-dotenv.config();
-
-// -------------------
-// Email Transporter
-// -------------------
-const transporter = nodemailer.createTransport({
-  host: process.env.SMTP_HOST,
-  port: Number(process.env.SMTP_PORT),
-  secure: false, // TLS
-  auth: {
-    user: process.env.EMAIL_USER,
-    pass: process.env.EMAIL_PASS
-  }
-});
-
-// -------------------
-// Handle Contact Form
-// -------------------
 export const handleContactForm = async (req, res) => {
   try {
     const { name, email, phone, subject, message, preferred_contact } = req.body;
 
-    // ✅ Validate required fields
     if (!name || !email || !subject || !message) {
-      return res.status(400).json({
-        success: false,
-        error: "Missing required fields: name, email, subject, message"
-      });
+      return res.status(400).json({ success: false, error: "Missing required fields" });
     }
 
-    // ✅ Validate preferred_contact
-    if (
-      preferred_contact &&
-      !["email", "phone", "whatsapp"].includes(preferred_contact)
-    ) {
-      return res.status(400).json({
-        success: false,
-        error: "Invalid preferred_contact (must be: email, phone, or whatsapp)"
-      });
+    // ✅ Store in Supabase
+    const { error: dbError } = await supabase.from("contacts").insert([
+      { name, email, phone, subject, message, preferred_contact },
+    ]);
+
+    if (dbError) {
+      console.error("❌ Supabase insert error:", dbError);
+      return res.status(500).json({ success: false, error: "Database insert failed" });
     }
 
-    // ✅ Insert into Supabase
-    const { data, error } = await supabase
-      .from("contact_messages")
-      .insert([
-        {
-          name,
-          email,
-          phone,
-          subject,
-          message,
-          preferred_contact: preferred_contact || null
-        }
-      ])
-      .select()
-      .single();
+    // ✅ Configure Nodemailer
+    const transporter = nodemailer.createTransport({
+      host: process.env.SMTP_HOST,
+      port: parseInt(process.env.SMTP_PORT, 10) || 587,
+      secure: false, // STARTTLS
+      auth: {
+        user: process.env.EMAIL_USER, // must be Gmail
+        pass: process.env.EMAIL_PASS, // Gmail App Password
+      },
+    });
 
-    if (error) {
-      console.error("❌ Supabase insert error:", error.message);
-      return res.status(500).json({
-        success: false,
-        error: "Failed to save contact message",
-        details: error.message
-      });
-    }
+    // ✅ Verify transporter
+    transporter.verify((err, success) => {
+      if (err) {
+        console.error("❌ SMTP Verification failed:", err);
+      } else {
+        console.log("✅ SMTP Server is ready to take messages");
+      }
+    });
 
-    // -------------------
-    // Send Email to Admin
-    // -------------------
+    // ✅ HTML Template
+    const htmlTemplate = `
+      <h2>🎵 New Contact Form Submission</h2>
+      <p><b>Name:</b> ${name}</p>
+      <p><b>Email:</b> ${email}</p>
+      <p><b>Phone:</b> ${phone || "N/A"}</p>
+      <p><b>Preferred Contact:</b> ${preferred_contact || "N/A"}</p>
+      <p><b>Subject:</b> ${subject}</p>
+      <p><b>Message:</b><br>${message}</p>
+    `;
+
+    // ✅ Send Email
     try {
-      const htmlTemplate = `
-        <div style="font-family: Arial, sans-serif; background-color: #f9fafb; padding: 20px;">
-          <div style="max-width: 600px; margin: auto; background: white; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); overflow: hidden;">
-            <div style="background: linear-gradient(135deg, #4f46e5, #9333ea); color: white; padding: 20px; text-align: center;">
-              <h1 style="margin: 0; font-size: 24px;">🎵 VN Music Academy</h1>
-              <p style="margin: 5px 0 0;">New Contact Form Submission</p>
-            </div>
-            <div style="padding: 20px;">
-              <h2 style="margin-bottom: 10px; color: #111827;">📩 Message Details</h2>
-              <p><strong>Name:</strong> ${name}</p>
-              <p><strong>Email:</strong> ${email}</p>
-              <p><strong>Phone:</strong> ${phone || "Not provided"}</p>
-              <p><strong>Subject:</strong> ${subject}</p>
-              <p><strong>Preferred Contact:</strong> ${preferred_contact || "Not specified"}</p>
-              <div style="margin: 20px 0; padding: 15px; background: #f3f4f6; border-left: 4px solid #4f46e5;">
-                <p style="margin: 0; white-space: pre-line;">${message}</p>
-              </div>
-            </div>
-            <div style="background: #f9fafb; padding: 15px; text-align: center; font-size: 14px; color: #6b7280;">
-              <p>🎼 This email was sent automatically by VN Music Academy's contact system.</p>
-              <p>Received on ${new Date().toLocaleString()}</p>
-            </div>
-          </div>
-        </div>
-      `;
-
       await transporter.sendMail({
-        from: `"${process.env.EMAIL_FROM_NAME}" <${process.env.EMAIL_FROM_ADDRESS}>`,
-        to: process.env.RECEIVER_EMAIL,
+        from: `"${process.env.EMAIL_FROM_NAME}" <${process.env.EMAIL_USER}>`, // FIXED
+        to: process.env.RECEIVER_EMAIL, // your email
         subject: `🎵 New Contact Form: ${subject} - From ${name}`,
-        html: htmlTemplate
+        html: htmlTemplate,
       });
 
-      console.log("📧 Contact form email sent successfully");
+      console.log("✅ Email sent successfully");
     } catch (sendErr) {
       console.error("❌ Error while sending email:", sendErr);
       return res.status(500).json({
         success: false,
         error: "Email sending failed",
-        details: sendErr.message
+        details: sendErr.message,
+        smtp: sendErr,
       });
     }
 
-    return res.status(201).json({
-      success: true,
-      message: "Contact message submitted successfully and email sent",
-      data
-    });
+    return res.status(200).json({ success: true, message: "Form submitted successfully" });
   } catch (err) {
-    console.error("❌ Controller error:", err);
-    res.status(500).json({
-      success: false,
-      error: "Internal server error",
-      details: err.message
-    });
+    console.error("❌ Unexpected error in handleContactForm:", err);
+    return res.status(500).json({ success: false, error: "Server error" });
   }
 };
