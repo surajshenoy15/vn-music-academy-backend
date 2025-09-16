@@ -6,74 +6,54 @@ export const handleContactForm = async (req, res) => {
   try {
     const { name, email, phone, subject, message, preferred_contact } = req.body;
 
-    if (!name || !email || !subject || !message) {
-      return res.status(400).json({ success: false, error: "Missing required fields" });
+    // Insert into Supabase
+    const { data, error } = await supabase
+      .from("contacts")
+      .insert([{ name, email, phone, subject, message, preferred_contact }]);
+
+    if (error) {
+      console.error("Supabase Insert Error:", error);
+      return res.status(500).json({ error: "Failed to save form data." });
     }
 
-    // ✅ Store in Supabase
-    const { error: dbError } = await supabase.from("contacts").insert([
-      { name, email, phone, subject, message, preferred_contact },
-    ]);
+    console.log("✅ Data stored in Supabase:", data);
 
-    if (dbError) {
-      console.error("❌ Supabase insert error:", dbError);
-      return res.status(500).json({ success: false, error: "Database insert failed" });
-    }
-
-    // ✅ Configure Nodemailer
+    // Nodemailer transport
     const transporter = nodemailer.createTransport({
-      host: process.env.SMTP_HOST,
-      port: parseInt(process.env.SMTP_PORT, 10) || 587,
-      secure: false, // STARTTLS
+      service: "gmail",
       auth: {
-        user: process.env.EMAIL_USER, // must be Gmail
-        pass: process.env.EMAIL_PASS, // Gmail App Password
+        user: process.env.EMAIL_USER, // must match .env
+        pass: process.env.EMAIL_PASS, // App password if using Gmail
       },
     });
 
-    // ✅ Verify transporter
-    transporter.verify((err, success) => {
+    console.log("📨 Email Config ->", process.env.EMAIL_USER);
+
+    const mailOptions = {
+      from: process.env.EMAIL_USER,
+      to: process.env.EMAIL_RECEIVER, // your receiving email
+      subject: `New Contact Form Submission: ${subject}`,
+      text: `
+        Name: ${name}
+        Email: ${email}
+        Phone: ${phone}
+        Preferred Contact: ${preferred_contact}
+        
+        Message: ${message}
+      `,
+    };
+
+    // Send mail
+    transporter.sendMail(mailOptions, (err, info) => {
       if (err) {
-        console.error("❌ SMTP Verification failed:", err);
-      } else {
-        console.log("✅ SMTP Server is ready to take messages");
+        console.error("❌ Error sending email:", err);
+        return res.status(500).json({ error: "Failed to send email." });
       }
+      console.log("✅ Email sent:", info.response);
+      return res.status(200).json({ success: true, message: "Form submitted successfully." });
     });
-
-    // ✅ HTML Template
-    const htmlTemplate = `
-      <h2>🎵 New Contact Form Submission</h2>
-      <p><b>Name:</b> ${name}</p>
-      <p><b>Email:</b> ${email}</p>
-      <p><b>Phone:</b> ${phone || "N/A"}</p>
-      <p><b>Preferred Contact:</b> ${preferred_contact || "N/A"}</p>
-      <p><b>Subject:</b> ${subject}</p>
-      <p><b>Message:</b><br>${message}</p>
-    `;
-
-    // ✅ Send Email
-    try {
-      await transporter.sendMail({
-        from: `"${process.env.EMAIL_FROM_NAME}" <${process.env.EMAIL_USER}>`, // FIXED
-        to: process.env.RECEIVER_EMAIL, // your email
-        subject: `🎵 New Contact Form: ${subject} - From ${name}`,
-        html: htmlTemplate,
-      });
-
-      console.log("✅ Email sent successfully");
-    } catch (sendErr) {
-      console.error("❌ Error while sending email:", sendErr);
-      return res.status(500).json({
-        success: false,
-        error: "Email sending failed",
-        details: sendErr.message,
-        smtp: sendErr,
-      });
-    }
-
-    return res.status(200).json({ success: true, message: "Form submitted successfully" });
   } catch (err) {
-    console.error("❌ Unexpected error in handleContactForm:", err);
-    return res.status(500).json({ success: false, error: "Server error" });
+    console.error("❌ Unexpected Error:", err);
+    res.status(500).json({ error: "Internal server error." });
   }
 };
