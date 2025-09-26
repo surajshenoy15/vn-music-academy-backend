@@ -19,10 +19,10 @@ app.use(express.json());
 // CORS setup
 // ==================
 const allowedOrigins = [
-  process.env.FRONTEND_URL || "http://localhost:5173",
-  "http://localhost:3001"
+  "http://localhost:5173",   // Vite dev
+  "http://localhost:3001",   // React dev
+  process.env.FRONTEND_URL,  // Production frontend (set in .env)
 ];
-
 
 app.use(
   cors({
