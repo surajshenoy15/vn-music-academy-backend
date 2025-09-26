@@ -19,7 +19,7 @@ app.use(express.json());
 // CORS setup
 // ==================
 const allowedOrigins = [
-  "http://localhost:5173",   // Vite dev
+  "https://vn-music-academy.vercel.app",   // Vite dev
   "http://localhost:3001",   // React dev
   process.env.FRONTEND_URL,  // Production frontend (set in .env)
 ];
