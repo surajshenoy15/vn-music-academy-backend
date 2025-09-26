@@ -1,9 +1,5 @@
-// routes/studentRoutes.js
 import express from "express";
-import {
-  requestOtp,
-  verifyOtp
-} from "../controllers/studentController.js";
+import { requestOtp, verifyOtp } from "../controllers/studentController.js";
 
 const router = express.Router();
 
