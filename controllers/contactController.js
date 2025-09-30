@@ -76,7 +76,7 @@ export const handleContactForm = async (req, res) => {
                         <tr>
                             <td style="background: linear-gradient(135deg, #4A4947 0%, #5a5856 100%); padding: 40px 30px; text-align: center;">
                                 <h1 style="margin: 0; color: #ffffff; font-size: 28px; font-weight: 600; letter-spacing: -0.5px;">
-                                    📧 New Contact Form Submission
+                                    New Contact Form Submission
                                 </h1>
                                 <p style="margin: 8px 0 0 0; color: rgba(255, 255, 255, 0.9); font-size: 16px;">
                                     ${new Date().toLocaleDateString('en-US', { 
@@ -100,7 +100,7 @@ export const handleContactForm = async (req, res) => {
                                     <tr>
                                         <td style="padding: 30px; border-bottom: 1px solid #f0f0f0;">
                                             <h2 style="margin: 0 0 20px 0; color: #4A4947; font-size: 20px; font-weight: 600;">
-                                                👤 Contact Information
+                                                 Contact Information
                                             </h2>
                                             
                                             <table cellpadding="0" cellspacing="0" border="0" width="100%">
@@ -142,7 +142,7 @@ export const handleContactForm = async (req, res) => {
                                     <tr>
                                         <td style="padding: 30px; border-bottom: 1px solid #f0f0f0;">
                                             <h2 style="margin: 0 0 15px 0; color: #4A4947; font-size: 20px; font-weight: 600;">
-                                                🎯 Subject
+                                                 Subject
                                             </h2>
                                             <div style="background: linear-gradient(135deg, #4A4947 0%, #5a5856 100%); color: white; padding: 16px 20px; border-radius: 8px; font-size: 16px; font-weight: 500; letter-spacing: -0.2px;">
                                                 ${subject}
@@ -170,7 +170,7 @@ export const handleContactForm = async (req, res) => {
                         <tr>
                             <td style="background-color: #4A4947; padding: 25px 30px; text-align: center;">
                                 <p style="margin: 0; color: rgba(255, 255, 255, 0.9); font-size: 14px;">
-                                    📧 This email was automatically generated from your contact form
+                                    This email was automatically generated from your contact form
                                 </p>
                                 <p style="margin: 8px 0 0 0; color: rgba(255, 255, 255, 0.7); font-size: 12px;">
                                     Please reply to this email to respond directly to the sender
