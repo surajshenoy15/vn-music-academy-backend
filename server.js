@@ -20,7 +20,8 @@ app.use(express.json());
 // ==================
 const allowedOrigins = [
   "http://localhost:5173",   // Vite dev
-  "http://localhost:3001",   // React dev
+  "http://localhost:3001",
+  "https://www.vnmusicacademy.com/",   // React dev
   process.env.FRONTEND_URL,  // Production frontend (set in .env)
 ];
 
