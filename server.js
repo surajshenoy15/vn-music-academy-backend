@@ -6,13 +6,16 @@ import dotenv from "dotenv";
 import adminRoutes from "./routes/adminRoutes.js";
 import studentRoutes from "./routes/studentRoutes.js";
 import paymentRoutes from "./routes/paymentRoutes.js";
-import contactRoutes from "./routes/contactRoutes.js"; // 👈 Added
+import contactRoutes from "./routes/contactRoutes.js";
+import attendanceRoutes from "./routes/attendanceRoutes.js"; // 👈 Added
 
 dotenv.config();
 
 const app = express();
 
+// ==================
 // Middleware
+// ==================
 app.use(express.json());
 
 // ==================
@@ -20,7 +23,7 @@ app.use(express.json());
 // ==================
 const allowedOrigins = [
   "http://localhost:5173",   // Vite dev
-  "http://localhost:3001",
+  "http://localhost:3001", 
   "https://www.vnmusicacademy.com/",   // React dev
   process.env.FRONTEND_URL,  // Production frontend (set in .env)
 ];
@@ -44,12 +47,15 @@ app.use(
 app.use("/api/admin", adminRoutes);
 app.use("/api/student", studentRoutes);
 app.use("/api/payment", paymentRoutes);
-app.use("/api/contact", contactRoutes); // 👈 Contact routes
+app.use("/api/contact", contactRoutes);
+app.use("/api/attendance", attendanceRoutes); // 👈 NEW Attendance route
 
 // Legacy routes (for backward compatibility)
 app.use("/admin", adminRoutes);
 
+// ==================
 // Root endpoint
+// ==================
 app.get("/", (req, res) => {
   res.json({
     message: "VN Music Academy API Server",
@@ -60,12 +66,15 @@ app.get("/", (req, res) => {
       student: "/api/student",
       payment: "/api/payment/create-order",
       contact: "/api/contact",
+      attendance: "/api/attendance",
     },
     timestamp: new Date().toISOString(),
   });
 });
 
+// ==================
 // Health check
+// ==================
 app.get("/health", (req, res) => {
   res.json({
     status: "OK",
@@ -78,11 +87,14 @@ app.get("/health", (req, res) => {
       student: "/api/student",
       payment: "/api/payment/create-order",
       contact: "/api/contact",
+      attendance: "/api/attendance",
     },
   });
 });
 
+// ==================
 // API info endpoint
+// ==================
 app.get("/api", (req, res) => {
   res.json({
     message: "VN Music Academy API",
@@ -101,13 +113,18 @@ app.get("/api", (req, res) => {
         verifyPayment: "POST /api/payment/verify-payment",
       },
       contact: {
-        submitForm: "POST /api/contact/submit", // example route
+        submitForm: "POST /api/contact/submit",
+      },
+      attendance: {
+        mark: "POST /api/attendance/mark",
       },
     },
   });
 });
 
+// ==================
 // 404 handler for API routes
+// ==================
 app.use("/api/*", (req, res) => {
   res.status(404).json({
     error: "API endpoint not found",
@@ -121,11 +138,14 @@ app.use("/api/*", (req, res) => {
       "POST /api/payment/create-order",
       "POST /api/payment/verify-payment",
       "POST /api/contact/submit",
+      "POST /api/attendance",
     ],
   });
 });
 
+// ==================
 // General 404 handler
+// ==================
 app.use((req, res) => {
   res.status(404).json({
     error: "Endpoint not found",
@@ -135,7 +155,9 @@ app.use((req, res) => {
   });
 });
 
+// ==================
 // Global error handler
+// ==================
 app.use((error, req, res, next) => {
   console.error("❌ Global error:", error);
 
@@ -160,12 +182,13 @@ app.use((error, req, res, next) => {
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {
   console.log(`🚀 VN Music Academy API running on port ${PORT}`);
-  console.log(`👨‍💼 Admin API: https://vn-music-academy.onrender.com/api/admin`);
-  console.log(`🎓 Student API: https://vn-music-academy.onrender.com/api/student`);
-  console.log(`💳 Payment API: https://vn-music-academy.onrender.com/api/payment/create-order`);
-  console.log(`📩 Contact API: https://vn-music-academy.onrender.com/api/contact`);
-  console.log(`❤️  Health Check: https://vn-music-academy.onrender.com/health`);
-  console.log(`📋 API Info: https://vn-music-academy.onrender.com/api`);
+  console.log(`👨‍💼 Admin API: http://localhost:${PORT}/api/admin`);
+  console.log(`🎓 Student API: http://localhost:${PORT}/api/student`);
+  console.log(`💳 Payment API: http://localhost:${PORT}/api/payment/create-order`);
+  console.log(`📩 Contact API: http://localhost:${PORT}/api/contact`);
+  console.log(`🗓️ Attendance API: http://localhost:${PORT}/api/attendance`);
+  console.log(`❤️ Health Check: http://localhost:${PORT}/health`);
+  console.log(`📋 API Info: http://localhost:${PORT}/api`);
 });
 
 export default app;

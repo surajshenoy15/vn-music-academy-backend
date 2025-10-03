@@ -8,6 +8,8 @@
     "dev": "nodemon server.js"
   },
   "dependencies": {
+    "@sendgrid/mail": "^8.1.6",
+    "@sendinblue/client": "^3.3.1",
     "@supabase/supabase-js": "^2.57.2",
     "bcryptjs": "^3.0.2",
     "cors": "^2.8.5",
@@ -17,6 +19,7 @@
     "express-rate-limit": "^8.1.0",
     "jsonwebtoken": "^9.0.2",
     "nodemailer": "^7.0.6",
+    "nodemailer-sendinblue-transport": "^2.0.1",
     "razorpay": "^2.9.6",
     "sib-api-v3-sdk": "^8.5.0",
     "validator": "^13.15.15"
