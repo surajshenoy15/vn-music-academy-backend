@@ -26,7 +26,8 @@ const allowedOrigins = [
   "http://localhost:3001", 
   "https://www.vnmusicacademy.com/",   // React dev
   process.env.FRONTEND_URL,  // Production frontend (set in .env)
-  "https://vn-frontend.vercel.app"
+  "https://vn-frontend.vercel.app",
+  "https://vn-music-academy-eight.vercel.app"
 ];
 
 app.use(
