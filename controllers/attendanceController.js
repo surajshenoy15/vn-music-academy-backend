@@ -12,6 +12,41 @@ export const markAttendance = async (req, res) => {
       session_name,
     } = req.body;
 
+    if (!student_id || !date || !timing || !status) {
+      return res.status(400).json({
+        error:
+          "student_id, date, timing and status are required",
+      });
+    }
+
+    const normalizedStatus = status.trim().toLowerCase();
+
+    // Fetch student before inserting attendance
+    const { data: student, error: studentError } =
+      await supabase
+        .from("students")
+        .select(
+          "name, email, session_validity_end"
+        )
+        .eq("id", student_id)
+        .single();
+
+    if (studentError) {
+      console.error(
+        "❌ Fetch student error:",
+        studentError.message
+      );
+
+      return res.status(400).json({
+        error: studentError.message,
+      });
+    }
+
+    console.log(
+      `👤 Student: ${student.name}, Email: ${student.email}, Validity: ${student.session_validity_end}`
+    );
+
+    // Insert attendance
     const { data: attendance, error: attendanceError } =
       await supabase
         .from("attendance")
@@ -20,8 +55,8 @@ export const markAttendance = async (req, res) => {
             student_id,
             date,
             timing,
-            status,
-            session_name,
+            status: normalizedStatus,
+            session_name: session_name || null,
           },
         ])
         .select();
@@ -66,34 +101,14 @@ export const markAttendance = async (req, res) => {
       `📊 Present sessions for student_id ${student_id}: ${count}`
     );
 
-    const { data: student, error: studentError } =
-      await supabase
-        .from("students")
-        .select("name, email, renewal_date")
-        .eq("id", student_id)
-        .single();
-
-    if (studentError) {
-      console.error(
-        "❌ Fetch student error:",
-        studentError.message
-      );
-
-      return res.status(400).json({
-        error: studentError.message,
-      });
-    }
-
-    console.log(
-      `👤 Student: ${student.name}, Email: ${student.email}, Renewal date: ${student.renewal_date}`
-    );
-
-    const isPresent =
-      status?.toLowerCase() === "present";
-
-    // Triggers at 4, 8, 12, 16...
+    // Trigger at 4, 8, 12, 16...
     const milestoneReached =
-      isPresent && count > 0 && count % 4 === 0;
+      normalizedStatus === "present" &&
+      count > 0 &&
+      count % 4 === 0;
+
+    let emailSent = false;
+    let emailError = null;
 
     if (milestoneReached) {
       console.log(
@@ -105,16 +120,24 @@ export const markAttendance = async (req, res) => {
           student.email,
           student.name,
           count,
-          student.renewal_date
+          student.session_validity_end
         );
+
+        emailSent = true;
 
         console.log(
           `📩 Milestone email sent to ${student.email}`
         );
-      } catch (mailError) {
+      } catch (mailErrorObject) {
+        emailError =
+          mailErrorObject?.response?.body?.message ||
+          mailErrorObject?.message ||
+          "Milestone email failed";
+
         console.error(
-          `❌ Attendance saved, but milestone email failed:`,
-          mailError
+          "❌ Attendance saved, but milestone email failed:",
+          mailErrorObject?.response?.body ||
+            mailErrorObject
         );
       }
     } else {
@@ -126,11 +149,18 @@ export const markAttendance = async (req, res) => {
     return res.status(201).json({
       message: "Attendance marked successfully",
       milestoneReached,
+      emailSent,
+      emailError,
       totalSessions: count,
+      sessionValidityEnd:
+        student.session_validity_end,
       attendance,
     });
   } catch (err) {
-    console.error("❌ Error marking attendance:", err);
+    console.error(
+      "❌ Error marking attendance:",
+      err
+    );
 
     return res.status(500).json({
       error: "Internal server error",
